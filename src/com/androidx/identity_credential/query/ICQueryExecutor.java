@@ -24,7 +24,7 @@ public class ICQueryExecutor {
     public static final int GREATER_OR_EQUAL = 5;
     public static final int AND = 6;
     public static final int OR = 7;
-    public static final int UNARY_NOT = 8;
+    public static final int UNARY_NO = 8;
 
     private final Deque<DataItem> stack = new LinkedList<>();
 
