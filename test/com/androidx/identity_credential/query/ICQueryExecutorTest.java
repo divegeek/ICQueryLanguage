@@ -19,6 +19,7 @@ public class ICQueryExecutorTest {
     @Test
     void emptyQuery() {
         try {
+            fail();
             mExecutor.execute(new Array(), null, null);
             fail();
         } catch (QueryException e) {
