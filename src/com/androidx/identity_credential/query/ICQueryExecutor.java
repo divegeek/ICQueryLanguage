@@ -80,7 +80,7 @@ public class ICQueryExecutor {
         Number op = (Number) operator;
 
         if (op.getValue().intValue() == UNARY_NOT) {
-            return handleUnaryOperator();
+            return handleUnaryOperator(op);
         }
         return handleBinaryOperator(op);
     }
@@ -114,18 +114,25 @@ public class ICQueryExecutor {
         return result ? SimpleValue.TRUE : SimpleValue.FALSE;
     }
 
-    private SimpleValue handleUnaryOperator() throws QueryException {
-        SimpleValue result;
-        DataItem operand = stack.pop();
-        if (!isBoolean(operand)) {
-            throw new QueryException("Invalid query:  Applying unary not to non-boolean operand");
+    private SimpleValue handleUnaryOperator(Number op) throws QueryException {
+        switch (op.getValue().intValue()) {
+            case UNARY_NOT: {
+                SimpleValue result;
+                DataItem operand = stack.pop();
+                if (!isBoolean(operand)) {
+                    throw new QueryException("Invalid query:  Applying unary not to non-boolean operand");
+                }
+                if (operand.equals(SimpleValue.TRUE)) {
+                    result = SimpleValue.FALSE;
+                } else {
+                    result = SimpleValue.TRUE;
+                }
+                return result;
+            }
+
+            default:
+                throw new QueryException("Invalid query:  Unknown unary operator");
         }
-        if (operand.equals(SimpleValue.TRUE)) {
-            result = SimpleValue.FALSE;
-        } else {
-            result = SimpleValue.TRUE;
-        }
-        return result;
     }
 
     private boolean operateOnOther(Number op, DataItem operandA, DataItem operandB) throws QueryException {
