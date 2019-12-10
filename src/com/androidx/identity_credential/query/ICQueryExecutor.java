@@ -59,7 +59,8 @@ public class ICQueryExecutor {
         }
 
         if (stack.size() != 1) {
-            throw new QueryException(("Invalid query: " + stack.size() + " stack elements remaining"));
+            throw new QueryException(("Invalid query: " + stack.size() + " stack elements " +
+                    "remaining"));
         }
         if (stack.peek() instanceof SimpleValue) {
             SimpleValue result = (SimpleValue) stack.pop();
@@ -90,8 +91,7 @@ public class ICQueryExecutor {
         DataItem operandA = stack.pop();
 
         if (!compareTags(operandA.getTag(), operandB.getTag())) {
-            throw new QueryException(
-                    "Invalid query:  Operands have different tags: " + operandA.getTag() + " and " + operandB.getTag());
+            throw new QueryException("Invalid query:  Operands have different tags: " + operandA.getTag() + " and " + operandB.getTag());
         }
 
         boolean result = false;
@@ -120,7 +120,7 @@ public class ICQueryExecutor {
                 SimpleValue result;
                 DataItem operand = stack.pop();
                 if (!isBoolean(operand)) {
-                    throw new QueryException("Invalid query:  Applying unary not to non-boolean operand");
+                    throw new QueryException("Invalid query:  Applying unary not to non-boolean " + "operand");
                 }
                 if (operand.equals(SimpleValue.TRUE)) {
                     result = SimpleValue.FALSE;
@@ -158,7 +158,8 @@ public class ICQueryExecutor {
                 return toBoolean(operandA) || toBoolean(operandB);
 
             default:
-                throw new QueryException("Invalid query:  Non-boolean operator applied to booleans");
+                throw new QueryException("Invalid query:  Non-boolean operator applied to " +
+                        "booleans");
         }
     }
 

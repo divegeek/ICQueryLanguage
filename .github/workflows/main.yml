@@ -8,5 +8,5 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Test
-      run: ./gradlew test
+      - name: Test
+        run: ./gradlew test

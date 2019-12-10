@@ -29,11 +29,12 @@ public class ParameterSet extends HashMap<String, DataItem> {
                 break;
 
             case TYPE_STRING:
-                typeMatched = parameter instanceof  UnicodeString;
+                typeMatched = parameter instanceof UnicodeString;
                 break;
 
             case TYPE_BOOLEAN:
-                typeMatched = parameter.equals(SimpleValue.TRUE) || parameter.equals((SimpleValue.FALSE));
+                typeMatched =
+                        parameter.equals(SimpleValue.TRUE) || parameter.equals((SimpleValue.FALSE));
                 break;
 
             default:
@@ -41,7 +42,7 @@ public class ParameterSet extends HashMap<String, DataItem> {
         }
 
         if (!typeMatched) {
-            throw new QueryException(("Invalid parameter reference, query type does not match parameter type"));
+            throw new QueryException(("Invalid parameter reference, query type does not match " + "parameter type"));
         }
 
         return parameter;

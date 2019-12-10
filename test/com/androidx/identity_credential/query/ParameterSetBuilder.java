@@ -3,9 +3,6 @@ package com.androidx.identity_credential.query;
 import co.nstant.in.cbor.CborBuilder;
 import co.nstant.in.cbor.model.UnicodeString;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-
 public class ParameterSetBuilder {
     private ParameterSet set = new ParameterSet();
 
