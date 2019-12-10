@@ -6,6 +6,8 @@ import co.nstant.in.cbor.model.*;
 import java.util.Deque;
 import java.util.LinkedList;
 
+import static com.androidx.identity_credential.query.ParameterSet.DATE_TAG;
+
 public class ICQueryExecutor {
 
     public static final int DATA_REF = 300;
@@ -28,13 +30,21 @@ public class ICQueryExecutor {
 
     private final Deque<DataItem> stack = new LinkedList<>();
 
-    public boolean execute(Array query, ParameterSet parameters, DataSet dataElements) throws QueryException {
+    public boolean execute(Array query, ParameterSet parameters, DataSet dataElements)
+            throws QueryException {
         stack.clear();
 
         for (DataItem entry : query.getDataItems()) {
             Tag tag = entry.getTag();
             if (tag == null) {
                 throw new QueryException("Invalid query entry: missing tag.");
+            }
+
+            // Operators can have both a tag on their type (indicating the required operand type)
+            // as well as the tag specifying that the entry is an operator.  Get the outermost
+            // tag in this case.
+            if (tag.getTag() != null) {
+                tag = tag.getTag();
             }
 
             DataItem newStackEntry;
@@ -59,8 +69,8 @@ public class ICQueryExecutor {
         }
 
         if (stack.size() != 1) {
-            throw new QueryException(("Invalid query: " + stack.size() + " stack elements " +
-                    "remaining"));
+            throw new QueryException(
+                    ("Invalid query: " + stack.size() + " stack elements " + "remaining"));
         }
         if (stack.peek() instanceof SimpleValue) {
             SimpleValue result = (SimpleValue) stack.pop();
@@ -91,25 +101,40 @@ public class ICQueryExecutor {
         DataItem operandA = stack.pop();
 
         if (!compareTags(operandA.getTag(), operandB.getTag())) {
-            throw new QueryException("Invalid query:  Operands have different tags: " + operandA.getTag() + " and " + operandB.getTag());
+            throw new QueryException(
+                    "Invalid query:  Operands have different tags: " + operandA.getTag() + " and " +
+                    operandB.getTag());
+        }
+        if (operandA.getTag() != null && !compareTags(op.getTag(), operandA.getTag())) {
+            throw new QueryException(
+                    "Invalid query:  Operands and operator have different type " + "tags: " +
+                    op.getTag() + " and " + operandA.getTag());
         }
 
         boolean result = false;
         if (operandA instanceof Number) {
             if (!(operandB instanceof Number)) {
-                throw new QueryException("Invalid query:  Operands are different types: " + operandA + " and " + operandB);
+                throw new QueryException(
+                        "Invalid query:  Operands are different types: " + operandA + " and " +
+                        operandB);
             }
             result = operateOnNumbers(op, (Number) operandA, (Number) operandB);
         } else if (isBoolean(operandA)) {
             if (!isBoolean(operandB)) {
-                throw new QueryException("Invalid query:  Operands are different types: " + operandA + " and " + operandB);
+                throw new QueryException(
+                        "Invalid query:  Operands are different types: " + operandA + " and " +
+                        operandB);
             }
             result = operateOnBooleans(op, operandA, operandB);
-        } else {
-            if (operandA.getMajorType() != operandB.getMajorType()) {
-                throw new QueryException("Invalid query:  Operands are different types: " + operandA + " and " + operandB);
+        } else if (operandA instanceof UnicodeString) {
+            if (!(operandB instanceof UnicodeString)) {
+                throw new QueryException(
+                        "Invalid query:  Operands are different types: " + operandA + " and " +
+                        operandB);
             }
-            result = operateOnOther(op, operandA, operandB);
+            result = operateOnStrings(op, (UnicodeString) operandA, (UnicodeString) operandB);
+        } else {
+            throw new QueryException("Invalid query:  Unsupported operand type");
         }
         return result ? SimpleValue.TRUE : SimpleValue.FALSE;
     }
@@ -120,7 +145,8 @@ public class ICQueryExecutor {
                 SimpleValue result;
                 DataItem operand = stack.pop();
                 if (!isBoolean(operand)) {
-                    throw new QueryException("Invalid query:  Applying unary not to non-boolean " + "operand");
+                    throw new QueryException(
+                            "Invalid query:  Applying unary not to non-boolean " + "operand");
                 }
                 if (operand.equals(SimpleValue.TRUE)) {
                     result = SimpleValue.FALSE;
@@ -135,7 +161,13 @@ public class ICQueryExecutor {
         }
     }
 
-    private boolean operateOnOther(Number op, DataItem operandA, DataItem operandB) throws QueryException {
+    private boolean operateOnStrings(Number op, UnicodeString operandA, UnicodeString operandB)
+            throws QueryException {
+        if (operandA.getTag() != null && operandA.getTag().getValue() == DATE_TAG) {
+            return evaluateOrderingOperation(op,
+                    operandA.getString().compareTo(operandB.getString()));
+        }
+
         boolean comparisonResult = operandA.equals(operandB);
         switch (op.getValue().intValue()) {
             case EQUAL:
@@ -149,7 +181,8 @@ public class ICQueryExecutor {
         }
     }
 
-    private boolean operateOnBooleans(Number op, DataItem operandA, DataItem operandB) throws QueryException {
+    private boolean operateOnBooleans(Number op, DataItem operandA, DataItem operandB)
+            throws QueryException {
         switch (op.getValue().intValue()) {
             case AND:
                 return toBoolean(operandA) && toBoolean(operandB);
@@ -158,13 +191,17 @@ public class ICQueryExecutor {
                 return toBoolean(operandA) || toBoolean(operandB);
 
             default:
-                throw new QueryException("Invalid query:  Non-boolean operator applied to " +
-                        "booleans");
+                throw new QueryException(
+                        "Invalid query:  Non-boolean operator applied to " + "booleans");
         }
     }
 
-    private boolean operateOnNumbers(Number op, Number numberA, Number numberB) throws QueryException {
-        int ordering = numberA.getValue().compareTo(numberB.getValue());
+    private boolean operateOnNumbers(Number op, Number numberA, Number numberB)
+            throws QueryException {
+        return evaluateOrderingOperation(op, numberA.getValue().compareTo(numberB.getValue()));
+    }
+
+    private boolean evaluateOrderingOperation(Number op, int ordering) throws QueryException {
         switch (op.getValue().intValue()) {
             case LESS_THAN:
                 return (ordering < 0);

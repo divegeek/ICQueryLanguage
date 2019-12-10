@@ -4,10 +4,13 @@ import co.nstant.in.cbor.model.Number;
 import co.nstant.in.cbor.model.*;
 
 import java.util.HashMap;
+import java.util.Objects;
 
 import static com.androidx.identity_credential.query.ICQueryExecutor.*;
 
 public class ParameterSet extends HashMap<String, DataItem> {
+
+    public static int DATE_TAG = 18013;  // Placeholder until real value is registered.
 
     public DataItem getParameter(DataItem queryEntry) throws QueryException {
         if (!(queryEntry instanceof Array)) {
@@ -38,11 +41,21 @@ public class ParameterSet extends HashMap<String, DataItem> {
                 break;
 
             default:
-                throw new QueryException("Invalid parameter reference, unknown type specifier " + type.getValue());
+                throw new QueryException(
+                        "Invalid parameter reference, unknown type specifier " + type.getValue());
+        }
+
+        // Tags must match as well, if present.
+        Tag paramRefTag = type.getTag();
+        Tag paramValueTag = parameter.getTag();
+        if (!Objects.equals(paramRefTag, paramValueTag)) {
+            throw new QueryException("Invalid parameter reference, query type tag does not match " +
+                                     "parameter type tag");
         }
 
         if (!typeMatched) {
-            throw new QueryException(("Invalid parameter reference, query type does not match " + "parameter type"));
+            throw new QueryException(
+                    "Invalid parameter reference, query type does not match " + "parameter type");
         }
 
         return parameter;

@@ -1,12 +1,22 @@
 package com.androidx.identity_credential.query;
 
 import co.nstant.in.cbor.CborBuilder;
+import co.nstant.in.cbor.CborDecoder;
+import co.nstant.in.cbor.CborEncoder;
+import co.nstant.in.cbor.CborException;
 import co.nstant.in.cbor.model.Array;
+import co.nstant.in.cbor.model.DataItem;
 import co.nstant.in.cbor.model.SimpleValue;
 import co.nstant.in.cbor.model.UnsignedInteger;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.util.GregorianCalendar;
+import java.util.List;
+
 import static com.androidx.identity_credential.query.ICQueryExecutor.*;
+import static com.androidx.identity_credential.query.ParameterSet.DATE_TAG;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -146,11 +156,50 @@ public class ICQueryExecutorTest {
         assertFalse(mExecutor.execute(greaterEqualQuery, unequalParams, null));
     }
 
+    @Test
+    void compareDates() throws QueryException {
+        ParameterSet equalParams =
+                new ParameterSetBuilder().add("a", new GregorianCalendar(2019, 12, 10).getTime())
+                                         .add("b", new GregorianCalendar(2019, 12, 10).getTime())
+                                         .build();
+        ParameterSet greaterParams =
+                new ParameterSetBuilder().add("a", new GregorianCalendar(2019, 12, 10).getTime())
+                                         .add("b", new GregorianCalendar(1998, 12, 10).getTime())
+                                         .build();
+        ParameterSet lessParams =
+                new ParameterSetBuilder().add("a", new GregorianCalendar(1998, 12, 10).getTime())
+                                         .add("b", new GregorianCalendar(2019, 12, 10).getTime())
+                                         .build();
+
+        Array equalsQuery = createBinaryOperatorQuery(DATE_TAG, TYPE_STRING, EQUAL);
+        assertTrue(mExecutor.execute(equalsQuery, equalParams, null));
+        assertFalse(mExecutor.execute(equalsQuery, lessParams, null));
+        assertFalse(mExecutor.execute(equalsQuery, greaterParams, null));
+
+        Array lessThanQuery = createBinaryOperatorQuery(DATE_TAG, TYPE_STRING, LESS_THAN);
+        assertFalse(mExecutor.execute(lessThanQuery, equalParams, null));
+        assertTrue(mExecutor.execute(lessThanQuery, lessParams, null));
+        assertFalse(mExecutor.execute(lessThanQuery, greaterParams, null));
+
+        Array greaterThanQuery = createBinaryOperatorQuery(DATE_TAG, TYPE_STRING, GREATER_THAN);
+        assertFalse(mExecutor.execute(greaterThanQuery, equalParams, null));
+        assertFalse(mExecutor.execute(greaterThanQuery, lessParams, null));
+        assertTrue(mExecutor.execute(greaterThanQuery, greaterParams, null));
+    }
+
     private Array createBinaryOperatorQuery(int type, int op) {
         Array query = new Array();
         query.add(createParameterRef(type, "a"));
         query.add(createParameterRef(type, "b"));
         query.add(createOperator(op));
+        return query;
+    }
+
+    private Array createBinaryOperatorQuery(int tag, int type, int op) {
+        Array query = new Array();
+        query.add(createParameterRef(tag, type, "a"));
+        query.add(createParameterRef(tag, type, "b"));
+        query.add(createOperator(tag, op));
         return query;
     }
 
@@ -199,9 +248,30 @@ public class ICQueryExecutorTest {
         return operator;
     }
 
+    private DataItem createOperator(int tag, int op) {
+        List<DataItem> operator = new CborBuilder().addTag(OPERATOR).addTag(tag).add(op).build();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try {
+            new CborEncoder(baos).encode(operator);
+            operator = new CborDecoder(new ByteArrayInputStream(baos.toByteArray())).decode();
+        } catch (CborException e) {
+            throw new RuntimeException(e);
+        }
+        return operator.get(0);
+    }
+
+
     private Array createParameterRef(int type, String name) {
         Array paramRef =
                 (Array) new CborBuilder().addArray().add(name).add(type).end().build().get(0);
+        paramRef.setTag(PARAM_REF);
+        return paramRef;
+    }
+
+    private Array createParameterRef(int tag, int type, String name) {
+        Array paramRef = (Array) new CborBuilder().addArray().add(name)
+                                                  .add(ParameterSetBuilder.buildTagged(tag, type))
+                                                  .end().build().get(0);
         paramRef.setTag(PARAM_REF);
         return paramRef;
     }
