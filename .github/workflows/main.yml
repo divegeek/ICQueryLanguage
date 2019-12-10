@@ -8,5 +8,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Test
-        run: ./gradlew test
+    - uses: actions/checkout@v1
+    - name: Test
+      run: ./gradlew test
