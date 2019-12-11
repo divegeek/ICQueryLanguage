@@ -1,19 +1,13 @@
 package com.androidx.identity_credential.query;
 
 import co.nstant.in.cbor.CborBuilder;
-import co.nstant.in.cbor.CborDecoder;
-import co.nstant.in.cbor.CborEncoder;
-import co.nstant.in.cbor.CborException;
 import co.nstant.in.cbor.model.Array;
 import co.nstant.in.cbor.model.DataItem;
 import co.nstant.in.cbor.model.SimpleValue;
 import co.nstant.in.cbor.model.UnsignedInteger;
 import org.junit.jupiter.api.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.util.GregorianCalendar;
-import java.util.List;
 
 import static com.androidx.identity_credential.query.ICQueryExecutor.*;
 import static com.androidx.identity_credential.query.ParameterSet.DATE_TAG;
@@ -249,15 +243,7 @@ public class ICQueryExecutorTest {
     }
 
     private DataItem createOperator(int tag, int op) {
-        List<DataItem> operator = new CborBuilder().addTag(OPERATOR).addTag(tag).add(op).build();
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        try {
-            new CborEncoder(baos).encode(operator);
-            operator = new CborDecoder(new ByteArrayInputStream(baos.toByteArray())).decode();
-        } catch (CborException e) {
-            throw new RuntimeException(e);
-        }
-        return operator.get(0);
+        return new CborBuilder().add(op).tagged(tag).tagged(OPERATOR).build().get(0);
     }
 
 
@@ -269,8 +255,7 @@ public class ICQueryExecutorTest {
     }
 
     private Array createParameterRef(int tag, int type, String name) {
-        Array paramRef = (Array) new CborBuilder().addArray().add(name)
-                                                  .add(ParameterSetBuilder.buildTagged(tag, type))
+        Array paramRef = (Array) new CborBuilder().addArray().add(name).add(type).tagged(tag)
                                                   .end().build().get(0);
         paramRef.setTag(PARAM_REF);
         return paramRef;

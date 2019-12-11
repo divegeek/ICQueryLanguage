@@ -1,14 +1,8 @@
 package com.androidx.identity_credential.query;
 
 import co.nstant.in.cbor.CborBuilder;
-import co.nstant.in.cbor.CborDecoder;
-import co.nstant.in.cbor.CborEncoder;
-import co.nstant.in.cbor.CborException;
-import co.nstant.in.cbor.model.DataItem;
 import co.nstant.in.cbor.model.UnicodeString;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -26,31 +20,9 @@ public class ParameterSetBuilder {
     }
 
     public ParameterSetBuilder add(String name, Date value) {
-        set.put(name, buildTagged(ParameterSet.DATE_TAG,
-                new SimpleDateFormat("yyyy-MM-dd").format(value)));
+        set.put(name, new CborBuilder().add(new SimpleDateFormat("yyyy-MM-dd").format(value))
+                                       .tagged(ParameterSet.DATE_TAG).build().get(0));
         return this;
-    }
-
-    public static DataItem buildTagged(int tag, String value) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            CborEncoder encoder = new CborEncoder(baos);
-            encoder.encode(new CborBuilder().addTag(tag).add(value).build());
-            return new CborDecoder(new ByteArrayInputStream(baos.toByteArray())).decode().get(0);
-        } catch (CborException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static DataItem buildTagged(int tag, int value) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            CborEncoder encoder = new CborEncoder(baos);
-            encoder.encode(new CborBuilder().addTag(tag).add(value).build());
-            return new CborDecoder(new ByteArrayInputStream(baos.toByteArray())).decode().get(0);
-        } catch (CborException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     public ParameterSet build() {
